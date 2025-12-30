@@ -1,65 +1,132 @@
-import Image from "next/image";
+"use client";
+
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import ActivityCard from "./components/ActivityCard";
+import ControlPanel from "./components/ControlPanel";
+import Header from "./components/Header";
+
+interface ActivityRecord {
+  date: string;
+  commits: number;
+  prs: number;
+}
 
 export default function Home() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const [activity, setActivity] = useState<ActivityRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Initialize with current month (YYYY-MM format)
+  const getCurrentMonth = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}`;
+  };
+
+  // Get initial month from URL or default to current month
+  const getInitialMonth = () => {
+    const monthParam = searchParams.get("month");
+    if (monthParam && /^\d{4}-\d{2}$/.test(monthParam)) {
+      return monthParam;
+    }
+    return getCurrentMonth();
+  };
+
+  const [selectedMonth, setSelectedMonth] = useState(getInitialMonth());
+
+  // Get start and end dates for selected month
+  const getDateRangeFromMonth = (yearMonth: string) => {
+    const [year, month] = yearMonth.split("-");
+
+    // First day of the month
+    const startDate = `${year}-${month}-01`;
+
+    // Last day of the month
+    const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+    const endDate = `${year}-${month}-${String(lastDay).padStart(2, "0")}`;
+
+    return {
+      startDate,
+      endDate,
+    };
+  };
+
+  const fetchActivity = async () => {
+    setLoading(true);
+    try {
+      const { startDate, endDate } = getDateRangeFromMonth(selectedMonth);
+      const res = await fetch(
+        `/api/activity?startDate=${startDate}&endDate=${endDate}`
+      );
+      const data = await res.json();
+      setActivity(data.data || []);
+    } catch (error) {
+      console.error("Error fetching activity:", error);
+    }
+    setLoading(false);
+  };
+
+  // Update URL when month changes
+  const handleMonthChange = (newMonth: string) => {
+    setSelectedMonth(newMonth);
+    // Update URL with new month parameter
+    router.push(`${pathname}?month=${newMonth}`, { scroll: false });
+  };
+
+  // Initialize from URL on mount
+  useEffect(() => {
+    const monthFromUrl = searchParams.get("month");
+    if (monthFromUrl && /^\d{4}-\d{2}$/.test(monthFromUrl)) {
+      setSelectedMonth(monthFromUrl);
+    } else {
+      // Set URL to current month if not present
+      const currentMonth = getCurrentMonth();
+      router.replace(`${pathname}?month=${currentMonth}`, { scroll: false });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedMonth) {
+      fetchActivity();
+    }
+  }, [selectedMonth]);
+
+  // Calculate totals
+  const totalCommits = activity.reduce(
+    (sum, record) => sum + record.commits,
+    0
+  );
+  const totalPRs = activity.reduce((sum, record) => sum + record.prs, 0);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+    <div className="min-h-screen bg-gray-900">
+      <Header />
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-16">
+        <div className="space-y-6">
+          <ControlPanel
+            selectedMonth={selectedMonth}
+            setSelectedMonth={handleMonthChange}
+            onRefresh={fetchActivity}
+            loading={loading}
+            totalCommits={totalCommits}
+            totalPRs={totalPRs}
+          />
+
+          <ActivityCard activity={activity} loading={loading} />
         </div>
       </main>
+
+      <footer className="py-8 text-center text-gray-400 text-sm">
+        <p>GitHub token is valid till 31st March 2026 </p>
+        <p>Built with Next.js, Tailwind CSS, GitHub API, MongoDB and Cursor</p>
+      </footer>
     </div>
   );
 }
