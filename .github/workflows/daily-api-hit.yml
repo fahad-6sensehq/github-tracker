@@ -3,7 +3,7 @@ name: Daily API Sync
 on:
     schedule:
         - cron: '55 17 * * *' # Runs at 17:55 UTC daily (11:55 PM BD time)
-        - cron: '55 9 * * *' # Runs at 09:55 AM daily (3:55 AM BD time)
+        - cron: '10 10 * * *' # Runs at 10:10 UTC daily (4:10 AM BD time)
 
 jobs:
     hit-api:
