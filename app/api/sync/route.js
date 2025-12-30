@@ -6,6 +6,8 @@ export async function POST(request) {
     try {
         const { startDate, endDate, daysBack } = await request.json();
 
+        console.log(`Syncing data for ${startDate} to ${endDate}`);
+
         let start, end;
         if (startDate && endDate) {
             start = startDate;
