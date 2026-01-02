@@ -50,17 +50,34 @@ export default function ControlPanel({
     fetchMonths();
   }, []);
 
+  // Keyboard shortcut: Press 'R' or 'r' to trigger refresh
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if ((event.key === 'r' || event.key === 'R') && !loading) {
+        event.preventDefault();
+
+        onRefresh();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [onRefresh, loading]);
+
   return (
-    <div className="bg-gray-800 rounded-xl shadow-lg p-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div className="bg-gray-800 rounded-xl shadow-lg p-3 sm:p-4 lg:p-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         {/* Select Month */}
-        <div className="bg-gradient-to-br from-gray-700/50 to-gray-700/30 rounded-lg px-4 py-3 border border-gray-600">
-          <div className="text-xs font-medium text-gray-400 mb-2">Select Month</div>
+        <div className="bg-gradient-to-br from-gray-700/50 to-gray-700/30 rounded-lg px-3 py-2 sm:px-4 sm:py-3 border border-gray-600">
+          <div className="text-xs font-medium text-gray-400 mb-1.5 sm:mb-2">Select Month</div>
           <div className="relative">
             {loadingMonths ? (
-              <div className="text-base font-bold text-gray-100 flex items-center">
+              <div className="text-sm sm:text-base font-bold text-gray-100 flex items-center">
                 <svg
-                  className="animate-spin h-4 w-4 mr-2 text-gray-400"
+                  className="animate-spin h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 text-gray-400"
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
@@ -79,7 +96,7 @@ export default function ControlPanel({
                 <select
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="w-full appearance-none bg-transparent text-base font-bold text-gray-100 focus:outline-none cursor-pointer pr-6 [&>option]:bg-gray-800 [&>option]:text-gray-100 [&>option]:py-2 [&>option]:px-3"
+                  className="w-full appearance-none bg-transparent text-sm sm:text-base font-bold text-gray-100 focus:outline-none cursor-pointer pr-6 [&>option]:bg-gray-800 [&>option]:text-gray-100 [&>option]:py-2 [&>option]:px-3"
                 >
                   {availableMonths.map((month) => (
                     <option key={month.value} value={month.value} className="py-3">
@@ -88,7 +105,12 @@ export default function ControlPanel({
                   ))}
                 </select>
                 <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg
+                    className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </div>
@@ -98,34 +120,34 @@ export default function ControlPanel({
         </div>
 
         {/* Total Commits */}
-        <div className="bg-gradient-to-br from-blue-900/30 to-blue-800/30 rounded-lg px-4 py-3 border border-blue-700">
-          <div className="text-xs font-medium text-blue-400 mb-2">Total Commits</div>
-          <div className="text-2xl font-bold text-blue-300">{totalCommits}</div>
+        <div className="bg-gradient-to-br from-blue-900/30 to-blue-800/30 rounded-lg px-3 py-2 sm:px-4 sm:py-3 border border-blue-700">
+          <div className="text-xs font-medium text-blue-400 mb-1.5 sm:mb-2">Total Commits</div>
+          <div className="text-xl sm:text-2xl font-bold text-blue-300">{totalCommits}</div>
         </div>
 
         {/* Total PRs */}
-        <div className="bg-gradient-to-br from-purple-900/30 to-purple-800/30 rounded-lg px-4 py-3 border border-purple-700">
-          <div className="text-xs font-medium text-purple-400 mb-2">Total PRs</div>
-          <div className="text-2xl font-bold text-purple-300">{totalPRs}</div>
+        <div className="bg-gradient-to-br from-purple-900/30 to-purple-800/30 rounded-lg px-3 py-2 sm:px-4 sm:py-3 border border-purple-700">
+          <div className="text-xs font-medium text-purple-400 mb-1.5 sm:mb-2">Total PRs</div>
+          <div className="text-xl sm:text-2xl font-bold text-purple-300">{totalPRs}</div>
         </div>
 
         {/* PR Frequency */}
-        <div className="bg-gradient-to-br from-green-900/30 to-green-800/30 rounded-lg px-4 py-3 border border-green-700">
-          <div className="text-xs font-medium text-green-400 mb-2">PR Frequency</div>
-          <div className="text-2xl font-bold text-green-300">{prFrequency}</div>
-          <div className="text-xs text-green-400/70 mt-1">PRs/active day</div>
+        <div className="bg-gradient-to-br from-green-900/30 to-green-800/30 rounded-lg px-3 py-2 sm:px-4 sm:py-3 border border-green-700">
+          <div className="text-xs font-medium text-green-400 mb-1.5 sm:mb-2">PR Frequency</div>
+          <div className="text-xl sm:text-2xl font-bold text-green-300">{prFrequency}</div>
+          <div className="text-xs text-green-400/70 mt-0.5 sm:mt-1">PRs/active day</div>
         </div>
 
         {/* Refresh Button */}
         <button
           onClick={onRefresh}
           disabled={loading}
-          className="bg-gradient-to-br from-orange-900/30 to-orange-800/30 hover:from-orange-900/40 hover:to-orange-800/40 rounded-lg px-4 py-3 border border-orange-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="bg-gradient-to-br from-orange-900/30 to-orange-800/30 hover:from-orange-900/40 hover:to-orange-800/40 rounded-lg px-3 py-2 sm:px-4 sm:py-3 border border-orange-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <div className="text-xs font-medium text-orange-400 mb-2">Refresh</div>
+          <div className="text-xs font-medium text-orange-400 mb-1.5 sm:mb-2">Refresh</div>
           <div className="flex items-center justify-center">
             <svg
-              className={`w-6 h-6 text-orange-300 ${loading ? 'animate-spin' : ''}`}
+              className={`w-5 h-5 sm:w-6 sm:h-6 text-orange-300 ${loading ? 'animate-spin' : ''}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

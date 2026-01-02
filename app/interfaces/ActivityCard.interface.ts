@@ -1,3 +1,5 @@
+import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
+import { ReadonlyURLSearchParams } from 'next/navigation';
 import { CommitDetail, PRDetail } from './ActivityModel.interface';
 
 export interface ActivityRecord {
@@ -17,4 +19,7 @@ export interface ActivityRecord {
 export interface ActivityCardProps {
     activity: ActivityRecord[];
     loading: boolean;
+    router: AppRouterInstance;
+    pathname: string;
+    searchParams: ReadonlyURLSearchParams;
 }
