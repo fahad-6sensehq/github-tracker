@@ -1,4 +1,4 @@
-import { fetchGitHubActivity } from '@/lib/github';
+import { fetchGitHubActivity } from '@/lib/github-sync';
 import clientPromise from '@/lib/mongodb';
 import { NextResponse } from 'next/server';
 
@@ -42,11 +42,11 @@ export async function POST(request) {
                         prDetails: stats.prDetails || [],
                         issues: stats.issues || 0,
                         reviews: stats.reviews || 0,
-                        updatedAt: new Date()
-                    }
+                        updatedAt: new Date(),
+                    },
                 },
-                upsert: true
-            }
+                upsert: true,
+            },
         }));
 
         if (bulkOps.length > 0) {
@@ -56,7 +56,7 @@ export async function POST(request) {
         return NextResponse.json({
             success: true,
             message: `Synced ${Object.keys(dailyStats).length} days`,
-            data: dailyStats
+            data: dailyStats,
         });
     } catch (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
