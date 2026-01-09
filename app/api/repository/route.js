@@ -26,6 +26,9 @@ export async function GET() {
             dbReposMap.set(repo.fullName, repo);
         });
 
+        // Create a set of GitHub repo fullNames for quick lookup
+        const githubReposSet = new Set(githubRepos.map((repo) => repo.fullName));
+
         // Merge GitHub repos with DB data
         const mergedRepos = githubRepos.map((repo) => {
             const dbRepo = dbReposMap.get(repo.fullName);
@@ -36,6 +39,7 @@ export async function GET() {
                     isActive: dbRepo.isActive || false,
                     inDb: true,
                     _id: dbRepo._id,
+                    deletedFromGitHub: false,
                 };
             } else {
                 // Repo not in DB
@@ -43,14 +47,42 @@ export async function GET() {
                     ...repo,
                     isActive: false,
                     inDb: false,
+                    deletedFromGitHub: false,
                 };
             }
         });
 
+        // Find repos that exist in DB but not on GitHub (deleted from GitHub)
+        const deletedRepos = dbRepos
+            .filter((dbRepo) => !githubReposSet.has(dbRepo.fullName))
+            .map((dbRepo) => ({
+                id: dbRepo.id,
+                name: dbRepo.name,
+                fullName: dbRepo.fullName,
+                owner: dbRepo.owner,
+                ownerType: dbRepo.ownerType,
+                organization: dbRepo.organization,
+                description: dbRepo.description,
+                private: dbRepo.private,
+                url: dbRepo.url,
+                updatedAt: dbRepo.updatedAt,
+                language: dbRepo.language,
+                stars: dbRepo.stars,
+                forks: dbRepo.forks,
+                defaultBranch: dbRepo.defaultBranch,
+                isActive: dbRepo.isActive || false,
+                inDb: true,
+                _id: dbRepo._id,
+                deletedFromGitHub: true,
+            }));
+
+        // Combine merged repos with deleted repos
+        const allRepos = [...mergedRepos, ...deletedRepos];
+
         return NextResponse.json({
             success: true,
-            data: mergedRepos,
-            count: mergedRepos.length,
+            data: allRepos,
+            count: allRepos.length,
         });
     } catch (error) {
         console.error('Error in /api/repo:', error);

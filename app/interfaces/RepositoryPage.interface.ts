@@ -16,4 +16,5 @@ export interface Repository {
     isActive?: boolean;
     inDb?: boolean;
     _id?: string;
+    deletedFromGitHub?: boolean;
 }
