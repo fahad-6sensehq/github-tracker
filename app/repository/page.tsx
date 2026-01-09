@@ -16,6 +16,7 @@ function RepositoryContent() {
   const [saving, setSaving] = useState(false);
   const [addingRepo, setAddingRepo] = useState<Set<number>>(new Set());
   const [togglingRepo, setTogglingRepo] = useState<Set<number>>(new Set());
+  const [deletingRepo, setDeletingRepo] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     fetchRepos();
@@ -181,6 +182,44 @@ function RepositoryContent() {
       alert('Failed to toggle repository status. Please try again.');
     } finally {
       setTogglingRepo((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(repo.id);
+        return newSet;
+      });
+    }
+  };
+
+  const handleDeleteRepo = async (repo: Repository) => {
+    if (
+      !confirm(`Are you sure you want to delete "${repo.fullName}" from the database? This action cannot be undone.`)
+    ) {
+      return;
+    }
+
+    setDeletingRepo((prev) => new Set(prev).add(repo.id));
+    try {
+      const res = await fetch('/api/repository/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fullName: repo.fullName,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        // Remove the repo from local state
+        setRepos((prevRepos) => prevRepos.filter((r) => r.id !== repo.id));
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } catch (err) {
+      console.error('Error deleting repo:', err);
+      alert('Failed to delete repository. Please try again.');
+    } finally {
+      setDeletingRepo((prev) => {
         const newSet = new Set(prev);
         newSet.delete(repo.id);
         return newSet;
@@ -488,12 +527,16 @@ function RepositoryContent() {
                           const isNotInDb = repo.inDb === false;
                           const isAdding = addingRepo.has(repo.id);
                           const isToggling = togglingRepo.has(repo.id);
+                          const isDeleting = deletingRepo.has(repo.id);
+                          const isDeletedFromGitHub = repo.deletedFromGitHub === true;
                           const isInDb = repo.inDb === true || (repo.inDb !== false && repo._id); // More robust check
                           return (
                             <div
                               key={repo.id}
                               className={`px-4 py-4 sm:px-6 sm:py-5 hover:bg-gray-700/40 transition-all duration-200 border-l-4 ${
-                                isNotInDb
+                                isDeletedFromGitHub
+                                  ? 'bg-red-900/20 border-red-600'
+                                  : isNotInDb
                                   ? 'bg-yellow-900/10 border-yellow-600'
                                   : repo.isActive
                                   ? 'bg-gray-800/50 border-green-600/50'
@@ -554,6 +597,18 @@ function RepositoryContent() {
                                             />
                                           </svg>
                                           Private
+                                        </span>
+                                      )}
+                                      {isDeletedFromGitHub && (
+                                        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-red-900/60 text-red-200 border border-red-700/50 shadow-sm">
+                                          <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                            <path
+                                              fillRule="evenodd"
+                                              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                              clipRule="evenodd"
+                                            />
+                                          </svg>
+                                          Deleted from GitHub
                                         </span>
                                       )}
                                       {isNotInDb && (
@@ -693,51 +748,100 @@ function RepositoryContent() {
                                       <span>Updated {new Date(repo.updatedAt).toLocaleDateString()}</span>
                                     </span>
                                   </div>
-                                  {isNotInDb && (
+                                  {(isNotInDb || isDeletedFromGitHub) && (
                                     <div className="mt-4 pt-3 border-t border-gray-700/50">
-                                      <button
-                                        onClick={() => handleAddRepo(repo)}
-                                        disabled={isAdding}
-                                        className="px-4 py-2 bg-yellow-900/40 hover:bg-yellow-900/60 rounded-lg border-2 border-yellow-700/70 hover:border-yellow-600 text-sm font-semibold text-yellow-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm hover:shadow-md"
-                                      >
-                                        {isAdding ? (
-                                          <>
-                                            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                                              <circle
-                                                className="opacity-25"
-                                                cx="12"
-                                                cy="12"
-                                                r="10"
-                                                stroke="currentColor"
-                                                strokeWidth="4"
-                                              ></circle>
-                                              <path
-                                                className="opacity-75"
-                                                fill="currentColor"
-                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                              ></path>
-                                            </svg>
-                                            Adding to Database...
-                                          </>
-                                        ) : (
-                                          <>
-                                            <svg
-                                              className="w-4 h-4"
-                                              fill="none"
-                                              stroke="currentColor"
-                                              viewBox="0 0 24 24"
-                                            >
-                                              <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={2}
-                                                d="M12 4v16m8-8H4"
-                                              />
-                                            </svg>
-                                            Add to Database
-                                          </>
+                                      <div className="flex gap-3">
+                                        {isNotInDb && (
+                                          <button
+                                            onClick={() => handleAddRepo(repo)}
+                                            disabled={isAdding}
+                                            className="px-4 py-2 bg-yellow-900/40 hover:bg-yellow-900/60 rounded-lg border-2 border-yellow-700/70 hover:border-yellow-600 text-sm font-semibold text-yellow-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm hover:shadow-md"
+                                          >
+                                            {isAdding ? (
+                                              <>
+                                                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                                  <circle
+                                                    className="opacity-25"
+                                                    cx="12"
+                                                    cy="12"
+                                                    r="10"
+                                                    stroke="currentColor"
+                                                    strokeWidth="4"
+                                                  ></circle>
+                                                  <path
+                                                    className="opacity-75"
+                                                    fill="currentColor"
+                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                                  ></path>
+                                                </svg>
+                                                Adding to Database...
+                                              </>
+                                            ) : (
+                                              <>
+                                                <svg
+                                                  className="w-4 h-4"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  viewBox="0 0 24 24"
+                                                >
+                                                  <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth={2}
+                                                    d="M12 4v16m8-8H4"
+                                                  />
+                                                </svg>
+                                                Add to Database
+                                              </>
+                                            )}
+                                          </button>
                                         )}
-                                      </button>
+                                        {isDeletedFromGitHub && (
+                                          <button
+                                            onClick={() => handleDeleteRepo(repo)}
+                                            disabled={isDeleting}
+                                            className="px-4 py-2 bg-red-900/40 hover:bg-red-900/60 rounded-lg border-2 border-red-700/70 hover:border-red-600 text-sm font-semibold text-red-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm hover:shadow-md"
+                                          >
+                                            {isDeleting ? (
+                                              <>
+                                                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                                  <circle
+                                                    className="opacity-25"
+                                                    cx="12"
+                                                    cy="12"
+                                                    r="10"
+                                                    stroke="currentColor"
+                                                    strokeWidth="4"
+                                                  ></circle>
+                                                  <path
+                                                    className="opacity-75"
+                                                    fill="currentColor"
+                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                                  ></path>
+                                                </svg>
+                                                Deleting...
+                                              </>
+                                            ) : (
+                                              <>
+                                                <svg
+                                                  className="w-4 h-4"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  viewBox="0 0 24 24"
+                                                >
+                                                  <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth={2}
+                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                  />
+                                                </svg>
+                                                Delete from Database
+                                              </>
+                                            )}
+                                          </button>
+                                        )}
+                                      </div>
                                     </div>
                                   )}
                                 </div>
