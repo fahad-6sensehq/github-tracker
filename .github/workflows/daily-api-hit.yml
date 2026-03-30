@@ -2,7 +2,7 @@ name: Daily API Sync
 
 on:
     schedule:
-        - cron: '45 17 * * *' # Runs at 17:45 UTC daily (11:45 PM BD time)
+        - cron: '30 17 * * *' # Runs at 17:30 UTC daily (11:30 PM BD time)
     workflow_dispatch: # Allows manual trigger from GitHub UI
 
 jobs:
